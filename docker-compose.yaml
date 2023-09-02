@@ -1,0 +1,43 @@
+version: "3.7"
+services:
+  saturn-node:
+    init: true
+    image: ghcr.io/filecoin-saturn/l1-node:${SATURN_NETWORK:-test}
+    container_name: saturn-node
+    restart: unless-stopped
+    environment:
+      FIL_WALLET_ADDRESS: "${FIL_WALLET_ADDRESS:?please make sure to set your FIL_WALLET_ADDRESS environment variable in the .env file}"
+      NODE_OPERATOR_EMAIL: "${NODE_OPERATOR_EMAIL:?please make sure to set your NODE_OPERATOR_EMAIL environment variable in the .env file}"
+      SPEEDTEST_SERVER_CONFIG: "${SPEEDTEST_SERVER_CONFIG}"
+    env_file:
+      - .env
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1000000
+    network_mode: host
+    stop_signal: SIGTERM
+    stop_grace_period: 30m
+    labels:
+      com.centurylinklabs.watchtower.scope: saturn
+      com.centurylinklabs.watchtower.enable: true
+      com.centurylinklabs.watchtower.lifecycle.pre-update: "/usr/src/app/reload.sh"
+      com.centurylinklabs.watchtower.lifecycle.pre-update-timeout: 60
+    volumes:
+      - ${SATURN_HOME:-$HOME}/shared:/usr/src/app/shared
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: saturn-watchtower
+    restart: always
+    environment:
+      WATCHTOWER_POLL_INTERVAL: 300
+      WATCHTOWER_LABEL_ENABLE: true
+      WATCHTOWER_LIFECYCLE_HOOKS: true
+      WATCHTOWER_SCOPE: saturn
+      WATCHTOWER_INCLUDE_RESTARTING: true
+      WATCHTOWER_CLEANUP: true
+    labels:
+      com.centurylinklabs.watchtower.scope: saturn
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
